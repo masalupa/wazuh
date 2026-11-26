@@ -1,0 +1,41 @@
+<group name="local,authentication_failures,">
+
+  <!-- Brute force SSH (Linux): 5x gagal login dalam 2 menit dari IP yang sama -->
+  <rule id="100050" level="12" frequency="5" timeframe="120">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_source_ip />
+    <description>Brute force terdeteksi: 5x gagal login SSH dalam 2 menit dari IP yang sama</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- Brute force Windows (RDP/logon lokal): 5x gagal login dalam 2 menit -->
+  <rule id="100051" level="12" frequency="5" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_source_ip />
+    <description>Brute force terdeteksi: 5x gagal login Windows dalam 2 menit dari IP yang sama</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- Eskalasi: SSH brute force berkelanjutan (>=15x dalam 10 menit) -->
+  <rule id="100052" level="15" frequency="15" timeframe="600">
+    <if_matched_sid>100050</if_matched_sid>
+    <description>Brute force SSH berkelanjutan: lebih dari 15 percobaan gagal dalam 10 menit - pertimbangkan blokir IP</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- Eskalasi: Windows brute force berkelanjutan (>=15x dalam 10 menit) -->
+  <rule id="100053" level="15" frequency="15" timeframe="600">
+    <if_matched_sid>100051</if_matched_sid>
+    <description>Brute force Windows berkelanjutan: lebih dari 15 percobaan gagal dalam 10 menit - pertimbangkan blokir IP</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+</group>
