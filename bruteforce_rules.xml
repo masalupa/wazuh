@@ -1,0 +1,122 @@
+<!--
+  bruteforce_rules.xml
+
+  Template custom rule deteksi brute force untuk Wazuh manager.
+  Deploy file ini ke manager sebagai /var/ossec/etc/rules/local_rules.xml
+  (atau gabungkan isinya ke local_rules.xml yang sudah ada), lalu:
+
+      sudo /var/ossec/bin/wazuh-control configtest
+      sudo systemctl restart wazuh-manager
+
+  ID rule custom di sini memakai range 100050-100059 (aman, tidak
+  bentrok dengan rule bawaan Wazuh yang memakai range di bawah 100000).
+  Sesuaikan range ini jika sudah ada rule custom lain yang memakai ID
+  yang sama di organisasi Anda.
+-->
+<group name="local,">
+
+  <!-- ============================================================= -->
+  <!-- 1. Brute force SSH (Linux) - gagal login berulang dari IP sama -->
+  <!-- ============================================================= -->
+  <rule id="100050" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_source_ip />
+    <description>Brute force SSH terdeteksi: 5x gagal login dalam 2 menit dari IP yang sama</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <rule id="100051" level="12" frequency="10" timeframe="120">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_source_ip />
+    <description>Brute force SSH KRITIS: 10x gagal login dalam 2 menit dari IP yang sama</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 2. Brute force login Windows (RDP / local logon) -->
+  <!--    Rule induk umum untuk Windows failed logon di Wazuh 4.x: -->
+  <!--    60122 (Logon Failure) - sesuaikan ID induk dengan versi -->
+  <!--    ruleset Anda (cek dengan wazuh-logtest jika tidak match). -->
+  <!-- ============================================================= -->
+  <rule id="100052" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_source_ip />
+    <description>Brute force Windows terdeteksi: 5x gagal login dalam 2 menit dari IP yang sama</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <rule id="100053" level="12" frequency="10" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_source_ip />
+    <description>Brute force Windows KRITIS: 10x gagal login dalam 2 menit dari IP yang sama</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 3. Brute force berdasarkan USERNAME yang sama (bukan hanya IP) -->
+  <!--    Berguna mendeteksi password spraying / credential stuffing -->
+  <!-- ============================================================= -->
+  <rule id="100054" level="10" frequency="8" timeframe="300">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_user />
+    <description>Kemungkinan password spraying: 8x gagal login untuk user yang sama dalam 5 menit (sumber IP berbeda-beda)</description>
+    <mitre>
+      <id>T1110.003</id>
+    </mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 4. Login SUKSES setelah brute force - indikasi akun berhasil dibobol -->
+  <!-- ============================================================= -->
+  <rule id="100055" level="14" timeframe="120">
+    <if_matched_sid>100050</if_matched_sid>
+    <same_source_ip />
+    <description>PERINGATAN: Login SSH berhasil setelah terdeteksi brute force dari IP yang sama - kemungkinan akun dibobol</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>authentication_success,</group>
+  </rule>
+
+</group>
+
+<!--
+  ===============================================================
+  OPSIONAL: Active Response - blokir otomatis IP yang brute force
+  ===============================================================
+  Tambahkan blok di bawah ini ke /var/ossec/etc/ossec.conf (bagian
+  <ossec_config>), BUKAN ke file rules ini. Ini akan memblokir IP
+  penyerang selama 10 menit begitu rule 100051 (brute force SSH
+  kritis) ter-trigger.
+
+  <command>
+    <name>firewall-drop</name>
+    <executable>firewall-drop</executable>
+    <timeout_allowed>yes</timeout_allowed>
+  </command>
+
+  <active-response>
+    <command>firewall-drop</command>
+    <location>local</location>
+    <rules_id>100051</rules_id>
+    <timeout>600</timeout>
+  </active-response>
+
+  Pastikan agent yang bersangkutan mengizinkan active response
+  (cek <active-response><disabled>no</disabled></active-response>
+  di ossec.conf agent tersebut).
+  ===============================================================
+-->
